@@ -6,7 +6,7 @@
 +----------------------------------------------------------------------------------------------------+
  -->
 
-# SPYGLASS
+# SPYGLASS     
 
 Pytorch implementation for hepatic bile duct pathologies detection. 
 
@@ -151,7 +151,7 @@ model = LightningModel()
 
 - a datamodule (see data/datamodule.py):
 ```python
-from datamodule import DicomDataModule
+from datamodule import SpyGlassDataModule
 
 dm = SpyGlassDataModule(args, kwargs)
 ```
