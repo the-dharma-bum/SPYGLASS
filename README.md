@@ -1,36 +1,12 @@
 <!--
 +----------------------------------------------------------------------------------------------------+
 |                                                                                                    |
-|                                         MAIN TITLE & SHIELD                                        |
-|                                                                                                    |
-+----------------------------------------------------------------------------------------------------+
- -->
-
-# SPYGLASS
-
-![](./spyglass.png)
-
-<p align="center">
-    <!-- Last Master Commit-->
-    <img src="https://img.shields.io/github/last-commit/the-dharma-bum/SPYGLASS?label=last%20master%20commit&style=flat-square"
-         alt="GitHub last commit">
-        <!-- Last Commit-->
-    <img src="https://img.shields.io/github/last-commit/the-dharma-bum/SPYGLASS/master?style=flat-square"
-         alt="GitHub last commit">
-    <!-- Commit Status -->
-    <img src="https://img.shields.io/github/commit-status/the-dharma-bum/SPYGLASS/master/eca2cb36cf952f86dcd3fc9112890c92913f8b60?style=flat-square"
-         alt="GitHub commit status">
-</p>
-
-<!--
-+----------------------------------------------------------------------------------------------------+
-|                                                                                                    |
 |                                               MAIN TITLE                                           |
 |                                                                                                    |
 +----------------------------------------------------------------------------------------------------+
  -->
 
-
+# SPYGLASS
 
 Pytorch implementation for hepatic bile duct pathologies detection. 
 
