@@ -11,7 +11,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 import pytorch_lightning as pl
 from pytorch_lightning.metrics import Accuracy
 from typing import Tuple, Dict
-
+from utils import LabelSmoothingCrossEntropy
 
 
 class LightningModel(pl.LightningModule):
@@ -25,12 +25,23 @@ class LightningModel(pl.LightningModule):
     for this class. Those are gave to a Trainer object. See init_trainer() in main.py.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, **kwargs) -> None:
         """ Instanciate a Lightning Model. """
         super().__init__()
         self.net = torch.hub.load('pytorch/vision:v0.7.0', 'densenet121', pretrained=False)
         self.criterion   = CrossEntropyLoss()
         self.accuracy    = Accuracy() 
+        self.save_hyperparameters()
+
+
+    def init_criterion(self):
+        """ returns the loss to be used by a LightningModel object,
+            possibly using label smoothing.
+        """
+        if self.hparams.use_label_smoothing:
+            return LabelSmoothingCrossEntropy(smoothing=self.hparams.smoothing,
+                                              reduction=self.hparams.reduction)
+        return CrossEntropyLoss()
         
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -40,8 +51,7 @@ class LightningModel(pl.LightningModule):
             x (torch.Tensor): Input batch of shape (N,C,W,H).
 
         Returns:
-            torch.Tensor: Predicted class for each element of input batch.
-                          Shape: (N,).
+            torch.Tensor: Predicted class for each element of input batch. Shape: (N,).
         """
         return self.net(x)
 
@@ -49,7 +59,9 @@ class LightningModel(pl.LightningModule):
         """ Instanciate an optimizer and a learning rate scheduler to be used during training.
 
         Returns:
-            (Dict):
+            (Dict): Dict containing the optimizer(s) and learning rate scheduler(s) to be used by a Trainer
+                    object using this model. 
+                    The monitor key is used by the ReduceLROnPlateau scheduler.                        
         """
         optimizer = SGD(self.net.parameters(), lr=0.001, momentum=0.9, nesterov=True, weight_decay=5e-4)
         scheduler = ReduceLROnPlateau(optimizer, mode = 'min', factor=0.2, patience=10, verbose=True)

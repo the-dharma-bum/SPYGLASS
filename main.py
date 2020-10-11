@@ -18,8 +18,10 @@ from config import Config
 def init_data(input_root, medical_data_csv_path=None):
     return SpyGlassDataModule(input_root, medical_data_csv_path)
 
-def init_model():
-    return LightningModel()
+def init_model(cfg):
+    return LightningModel(use_label_smoothing=cfg.use_label_smoothing,
+                          smoothing=cfg.smoothing,
+                          reduction=cfg.reduction)
 
 def init_trainer():
     """ Init a Lightning Trainer using from_argparse_args
@@ -41,14 +43,15 @@ def init_trainer():
 # |                                                                                     | #
 # +-------------------------------------------------------------------------------------+ #
 
-def make_2d_dataset(video_root, output_root, sampling_factor, crop):
-    dataset_generator = Dataset2DGenerator(video_root, output_root, sampling_factor, crop)
+def make_2d_dataset(cfg):
+    dataset_generator = Dataset2DGenerator(cfg.video_root, cfg.output_root, 
+                                           cfg.sampling_factor, cfg.crop)
     dataset_generator.run()
 
-def run_training(input_root, medical_data_csv_path):
+def run_training(cfg):
     """ Instanciate a datamodule, a model and a trainer and run trainer.fit(model, data) """
-    data   = init_data(input_root, medical_data_csv_path)
-    model, trainer = init_model(), init_trainer()
+    data   = init_data(cfg.data_2d_root, cfg.medical_data_csv_path)
+    model, trainer = init_model(cfg), init_trainer()
     trainer.fit(model, data)
 
 def test(input_root, model_path):
@@ -60,7 +63,6 @@ def test(input_root, model_path):
 
 if __name__ == '__main__':
     cfg = Config()
-    # make_2d_dataset(cfg.video_root, cfg.data_2d_root, cfg.sampling_factor, cfg.crop)
-    run_training(cfg.data_2d_root, cfg.medical_data_csv_path)
-    # test('./lightning_logs/version_') 
+    # make_2d_dataset(cfg)
+    run_training(cfg) 
 
