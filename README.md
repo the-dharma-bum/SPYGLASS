@@ -49,6 +49,7 @@ Based on [Pytorch Lightning](https://github.com/PyTorchLightning/pytorch-lightni
 | Features                                                 |      Status      |     Owner    |
 |----------------------------------------------------------|:----------------:|:------------:|
 | Adaptative sampling factor to balance class              |      TO DO       |              |
+| Label Smoothing                                          |      DONE        |              |
 | Compute and log metrics                                  |      DONE        |              |
 | Log learning rate in TensorBoard                         |      DONE        |              |
 | Add small transformations                                |      DONE        |              |
@@ -72,6 +73,7 @@ Based on [Pytorch Lightning](https://github.com/PyTorchLightning/pytorch-lightni
 # Last Commit Changes Log
 
 - Initial commit making a (very) basic baseline trainable.
+- Add Label Smoothing.
 
 
 <!--
