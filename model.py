@@ -4,13 +4,12 @@ This class implements all the logic code.
 This model class will be the one to be fit by a Trainer
  """
 
+from typing import Tuple, Dict
 import torch
 from torch.optim import SGD
 from torch.nn import CrossEntropyLoss
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import pytorch_lightning as pl
-from pytorch_lightning.metrics import Accuracy
-from typing import Tuple, Dict
 from utils import LabelSmoothingCrossEntropy
 
 
@@ -26,15 +25,17 @@ class LightningModel(pl.LightningModule):
     """
 
     def __init__(self, **kwargs) -> None:
-        """ Instanciate a Lightning Model. """
+        """ Instanciate a Lightning Model. 
+        The call to the Lightning method save_hyperparameters() make every hp
+        accessible through self.hparams. e.g: self.hparams.use_label_smoothing.
+        """
         super().__init__()
-        self.net = torch.hub.load('pytorch/vision:v0.7.0', 'densenet121', pretrained=False)
-        self.criterion   = CrossEntropyLoss()
-        self.accuracy    = Accuracy() 
         self.save_hyperparameters()
-
-
-    def init_criterion(self):
+        self.net = torch.hub.load('pytorch/vision:v0.7.0', 'densenet121', pretrained=False)
+        self.criterion = self._init_criterion()
+        self.accuracy  = pl.metrics.Accuracy()
+        
+    def _init_criterion(self) -> torch.nn:
         """ returns the loss to be used by a LightningModel object,
             possibly using label smoothing.
         """
@@ -43,7 +44,6 @@ class LightningModel(pl.LightningModule):
                                               reduction=self.hparams.reduction)
         return CrossEntropyLoss()
         
-
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """ Calls the forward method of self.net. 
 
@@ -64,7 +64,7 @@ class LightningModel(pl.LightningModule):
                     The monitor key is used by the ReduceLROnPlateau scheduler.                        
         """
         optimizer = SGD(self.net.parameters(), lr=0.001, momentum=0.9, nesterov=True, weight_decay=5e-4)
-        scheduler = ReduceLROnPlateau(optimizer, mode = 'min', factor=0.2, patience=10, verbose=True)
+        scheduler = ReduceLROnPlateau(optimizer, mode = 'min', factor=0.2, patience=5, verbose=True)
         return {'optimizer': optimizer, 'lr_scheduler': scheduler, 'monitor': 'val_loss'}
 
     def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> Dict:

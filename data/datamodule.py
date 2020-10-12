@@ -16,23 +16,29 @@ class SpyGlassDataModule(LightningDataModule):
     
     """ Generates three dataloaders (train, eval, test) to be used by a Lightning Model. """
 
-    def __init__(self, input_root: str, medical_data_csv_path: str=None) -> None:
+    def __init__(self, input_root: str, medical_data_csv_path: str=None,
+                 train_batch_size: int=64, val_batch_size: int=64, num_workers: int=4) -> None:
         """ Instanciate a Pytorch Lightning DataModule.
-
-        Notes that dataloaders hyperparameters (transforms, batch sizes, etc..) should be defined
-        here so that this DataModule file can be shared to reproduce results easily.
 
         Args:
             input_root (str): The folder containing all the npz files.
+
             medical_data_csv_path (str): The csv file containing the label for the 98 patients.
+
+            train_batch_size (int): Batch size of the training dataloader.
+
+            val_batch_size (int): Batch size of the validation dataloader.
+
+            num_workers (int): Num of threads for each of the 3 dataloaders (train, val, test).
+
         """
         super().__init__()
         self.input_root = input_root
         if medical_data_csv_path is not None:
             self.medical_data_csv_path = medical_data_csv_path
-        self.train_batch_size: int = 64
-        self.val_batch_size:   int = 64
-        self.num_workers:      int = 4
+        self.train_batch_size = train_batch_size
+        self.val_batch_size   = val_batch_size
+        self.num_workers      = num_workers
         # value obtained by calling data.get_dataset_stats.get_mean_std_dataset()
         mean, std = [78.5606, 111.8194, 135.2136], [64.6343,  72.6750,  69.9263]
         self.train_transform: Transform = transforms.Compose([

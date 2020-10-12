@@ -49,6 +49,8 @@ Based on [Pytorch Lightning](https://github.com/PyTorchLightning/pytorch-lightni
 | Features                                                 |      Status      |     Owner    |
 |----------------------------------------------------------|:----------------:|:------------:|
 | Adaptative sampling factor to balance class              |      TO DO       |              |
+| Add optimizer and scheduler choice                       |      TO DO       |              |
+| Move optimizer and scheduler params to config.py         |      TO DO       |              |
 | Label Smoothing                                          |      DONE        |              |
 | Compute and log metrics                                  |      DONE        |              |
 | Log learning rate in TensorBoard                         |      DONE        |              |

@@ -15,8 +15,9 @@ from config import Config
 # |                                                                                     | #
 # +-------------------------------------------------------------------------------------+ #
 
-def init_data(input_root, medical_data_csv_path=None):
-    return SpyGlassDataModule(input_root, medical_data_csv_path)
+def init_data(cfg):
+    return SpyGlassDataModule(cfg.data_2d_root, cfg.medical_data_csv_path,
+                              cfg.train_batch_size, cfg.val_batch_size, cfg.num_workers)
 
 def init_model(cfg):
     return LightningModel(use_label_smoothing=cfg.use_label_smoothing,
@@ -31,7 +32,7 @@ def init_trainer():
     parser = Trainer.add_argparse_args(parser)
     args   = parser.parse_args()
     lr_logger      = LearningRateLogger()
-    early_stopping = EarlyStopping(monitor='val_loss', mode='min', min_delta=0.001, patience=5, verbose=True)
+    early_stopping = EarlyStopping(monitor='val_loss', mode='min', min_delta=0.001, patience=10, verbose=True)
     return Trainer.from_argparse_args(args, callbacks = [lr_logger, early_stopping])
 
 
@@ -50,7 +51,7 @@ def make_2d_dataset(cfg):
 
 def run_training(cfg):
     """ Instanciate a datamodule, a model and a trainer and run trainer.fit(model, data) """
-    data   = init_data(cfg.data_2d_root, cfg.medical_data_csv_path)
+    data   = init_data(cfg)
     model, trainer = init_model(cfg), init_trainer()
     trainer.fit(model, data)
 

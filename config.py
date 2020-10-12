@@ -18,6 +18,7 @@ class Config:
                                      Labels are integers in [1,6]. 
                                      This is used to create ground_truth label for neural network 
                                      training in data/dataset.py.
+                                     Can be None for testing.
 
         sampling_factor (int): When creating a 2d dataset from the videos, a certain amout of frames
                                is selected. This param controls how many frames to keep in the 2d 
@@ -29,6 +30,12 @@ class Config:
                     Note that this procedure could be avoided by doing the following:
                         1. Save 2d images of different size in make_2d_dataset.py
                         2. Resize each batch just before training by applying the RandomCrop transform. 
+
+        train_batch_size (int): Batch size of the training dataloader.
+
+        val_batch_size (int): Batch size of the validation dataloader.
+
+        num_workers (int): Num of threads for the 3 dataloaders (train, val, test).
 
         use_label_smoothing (bool):  Controls the loss used: Vanilla CrossEntropy if False, 
                                      smoothed CrossEntropy if True.
@@ -51,6 +58,9 @@ class Config:
     medical_data_csv_path: str = "../medical_data.csv"
     sampling_factor:       int = 10
     crop:                  int = 400
+    train_batch_size:      int = 64
+    val_batch_size:        int = 64
+    num_workers:           int = 4
     use_label_smoothing:  bool = True
     smoothing:           float = 0.1
     reduction:             str = 'mean'
