@@ -4,13 +4,14 @@ This class implements all the logic code.
 This model class will be the one to be fit by a Trainer
  """
 
+from numpy import random
 from typing import Tuple, Dict
 import torch
 from torch.optim import SGD
 from torch.nn import CrossEntropyLoss
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import pytorch_lightning as pl
-from utils import LabelSmoothingCrossEntropy
+from utils import LabelSmoothingCrossEntropy, Cutmix
 
 
 class LightningModel(pl.LightningModule):
@@ -67,6 +68,42 @@ class LightningModel(pl.LightningModule):
         scheduler = ReduceLROnPlateau(optimizer, mode = 'min', factor=0.2, patience=5, verbose=True)
         return {'optimizer': optimizer, 'lr_scheduler': scheduler, 'monitor': 'val_loss'}
 
+    def cutmix(self, inputs: torch.Tensor, targets: torch.Tensor) -> Tuple[torch.Tensor, float]:
+        """ Mix two inputs in a Cutout way.
+
+        Args:
+            inputs (torch.Tensor): Batch given to the network to be classified, of shape (N,C,W,H).
+            targets (torch.Tensor): Target classes, of shape (N,).
+
+        Returns:
+            Tuple[torch.Tensor, float]: The predicted classes tensor of shape (N,) and the loss.
+        """
+        lam, inputs, target_a, target_b = Cutmix(inputs, targets, self.hparams.cutmix_beta)
+        outputs = self(inputs)
+        loss_a, loss_b  = self.criterion(outputs, target_a), self.criterion(outputs, target_b)
+        loss = loss_a * lam + loss_b * (1. - lam)
+        return outputs, loss
+
+    def infere(self, inputs: torch.Tensor, targets: torch.Tensor, train: bool=True) -> Tuple[float]:
+        """ Infere the giving inputs and compute the loss using targets.
+
+        Args:
+            inputs (torch.Tensor): Batch given to the network to be classified, of shape (N,C,W,H).
+            targets (torch.Tensor): Target classes, of shape (N,).
+            train (bool, optional): If Train=False, will not perfrom Cutmix. Defaults to True.
+
+        Returns:
+            Tuple[float]: Tuple of float containing the loss and the accuracy for the current batch.
+        """
+        proba = random.rand(1)
+        if train and self.hparams.use_cutmix and proba < self.hparams.cutmix_p:
+            outputs, loss = self.cutmix(inputs, targets)
+        else:
+            outputs = self(inputs)
+            loss = self.criterion(outputs, targets)
+        acc = self.accuracy(outputs, targets)
+        return loss, acc
+
     def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> Dict:
         """ Perform the classic training step (infere + compute loss) on a batch.
 
@@ -83,9 +120,7 @@ class LightningModel(pl.LightningModule):
                   from Lightning, e.g on_epoch_start, on_epoch_end, etc...
         """
         inputs, targets = batch
-        outputs = self(inputs)
-        loss    = self.criterion(outputs, targets)
-        acc     = self.accuracy(outputs, targets)
+        loss, acc = self.infere(inputs, targets, train=True)
         self.log('Loss/Train', loss)
         self.log('Accuracy/Train', acc, prog_bar=True, logger=True)
         return {'loss': loss, 'acc': acc}
@@ -104,9 +139,7 @@ class LightningModel(pl.LightningModule):
                   from Lightning, e.g on_epoch_start, on_epoch_end, etc...
         """
         inputs, targets = batch
-        outputs = self(inputs)
-        loss    = self.criterion(outputs, targets)
-        acc     = self.accuracy(outputs, targets)
+        loss, acc = self.infere(inputs, targets, train=False)
         self.log('Loss/Validation', loss)
         self.log('Accuracy/Validation', acc, logger=True)
         return {'val_loss': loss, 'acc': acc}

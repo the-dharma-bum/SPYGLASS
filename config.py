@@ -51,6 +51,14 @@ class Config:
                           where eps is the smoothing param.
                           If reduction='mean', reduced_loss = sum(ce(j))/N
                           If reduction='sum',  reduced_loss = sum(ce(j))
+        
+        use_cutmix (bool): Controls if the batch are mixed in a Cutout way.
+
+        cutmix_p (float): Cutmix probability. If use_cutmix is False, this has no effect. 
+                          Controls the percentage of batches on which Cutmix is applied.
+
+        cutmix_beta (float): If use_cutmix is False, this has no effect.
+                             Else, a number is generated via numpy.random.beta(beta,beta)
     """
 
     video_root:            str = ""
@@ -64,3 +72,6 @@ class Config:
     use_label_smoothing:  bool = True
     smoothing:           float = 0.1
     reduction:             str = 'mean'
+    use_cutmix:           bool = True
+    cutmix_p:            float = 0.5
+    cutmix_beta:         float = 1.0   

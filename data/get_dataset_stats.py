@@ -16,7 +16,8 @@ def get_mean_std_dataset(input_root: str) -> Tuple[torch.Tensor, torch.Tensor]:
                                            per channels.
     """
     datamodule = SpyGlassDataModule(input_root)
-    datamodule.setup(stage='test')
+    # to loop over the entier dataset, and not over the train subset only
+    datamodule.setup(stage='test') 
     dataloader = datamodule.test_dataloader()
     mean, std = 0., 0.
     for images in tqdm(dataloader):

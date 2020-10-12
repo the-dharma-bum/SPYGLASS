@@ -3,7 +3,6 @@
 from argparse import ArgumentParser
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import LearningRateLogger, EarlyStopping, ModelCheckpoint
-from pytorch_lightning.callbacks import model_checkpoint
 from model import LightningModel
 from data import SpyGlassDataModule, Dataset2DGenerator
 from config import Config
@@ -22,7 +21,10 @@ def init_data(cfg):
 def init_model(cfg):
     return LightningModel(use_label_smoothing=cfg.use_label_smoothing,
                           smoothing=cfg.smoothing,
-                          reduction=cfg.reduction)
+                          reduction=cfg.reduction,
+                          use_cutmix=cfg.use_cutmix,
+                          cutmix_p=cfg.cutmix_p,
+                          cutmix_beta=cfg.cutmix_beta)
 
 def init_trainer():
     """ Init a Lightning Trainer using from_argparse_args
@@ -55,15 +57,16 @@ def run_training(cfg):
     model, trainer = init_model(cfg), init_trainer()
     trainer.fit(model, data)
 
-def test(input_root, model_path):
-    data    = init_data(input_root)
-    model   = LightningModel.load_from_checkpoint(model_path)
+def test(cfg, model_path):
+    data    = init_data(cfg)
+    data.setup(stage='test')
+    model   = LightningModel.load_from_checkpoint(model_path) 
     trainer = init_trainer()
-    trainer.test()
-
+    results = trainer.test(model, data.val_dataloader())
 
 if __name__ == '__main__':
     cfg = Config()
     # make_2d_dataset(cfg)
-    run_training(cfg) 
+    run_training(cfg)
+    # test(cfg, './lightning_logs/version_0/checkpoints/epoch=1.ckpt')
 
