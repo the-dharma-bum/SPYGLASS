@@ -16,13 +16,17 @@ from config import Config
 # +-------------------------------------------------------------------------------------+ #
 
 def init_data(cfg):
-    return SpyGlassDataModule(cfg.data_2d_root, cfg.medical_data_csv_path,
+    if cfg.mode == '2d':
+        input_root = cfg.data_2d_root
+    elif cfg.mode == 'video':
+        input_root = cfg.video_root
+    return SpyGlassDataModule(input_root, cfg.channels, cfg.time_depth, 
+                              cfg.x_size, cfg.y_size, cfg.medical_data_csv_path, cfg.mode,
                               cfg.train_batch_size, cfg.val_batch_size, cfg.num_workers)
 
 def init_model(cfg):
     return LightningModel(use_label_smoothing=cfg.use_label_smoothing,
-                          smoothing=cfg.smoothing,
-                          reduction=cfg.reduction)
+                          smoothing=cfg.smoothing, mode=cfg.mode)
 
 def init_trainer():
     """ Init a Lightning Trainer using from_argparse_args

@@ -44,23 +44,20 @@ class Config:
         smoothing (float): This has no effect if use_label_smoothing is False:
                            Else, the one true label will be 1-smoothing instead of 1,
                            and others false labels will be smoothing instead of 0.
-
-        reduction (str): 'mean' or 'sum'. This has no effect is use_label_smoothing is False.
-                          The smoothed cross entropy (sce) is in general:
-                                * sce(i) = (1-eps)ce(i) + eps*reduced_loss
-                          where eps is the smoothing param.
-                          If reduction='mean', reduced_loss = sum(ce(j))/N
-                          If reduction='sum',  reduced_loss = sum(ce(j))
     """
 
-    video_root:            str = ""
-    data_2d_root:          str = "/homes/l17vedre/Bureau/Sanssauvegarde/2D"
-    medical_data_csv_path: str = "../medical_data.csv"
+    video_root:            str = "/homes/l17vedre/Bureau/Sanssauvegarde/cropped"
+    data_2d_root:          str = "/homes/l17vedre/Bureau/Sanssauvegarde/2D_sampling1"
+    medical_data_csv_path: str = "/homes/l17vedre/SPYGLASS/medical_data.csv"
+    mode:                  str = '2d' 
+    channels:              int = 3
+    time_depth:            int = 25*1 # first 1 seconds
+    x_size:                int = 224
+    y_size:                int = 224   
     sampling_factor:       int = 10
     crop:                  int = 400
-    train_batch_size:      int = 64
-    val_batch_size:        int = 64
+    train_batch_size:      int = 2
+    val_batch_size:        int = 2
     num_workers:           int = 4
     use_label_smoothing:  bool = True
-    smoothing:           float = 0.1
-    reduction:             str = 'mean'
+    smoothing:           float = 0.1                 

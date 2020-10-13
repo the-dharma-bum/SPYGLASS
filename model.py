@@ -7,10 +7,11 @@ This model class will be the one to be fit by a Trainer
 from typing import Tuple, Dict
 import torch
 from torch.optim import SGD
-from torch.nn import CrossEntropyLoss
+from torch.nn import BCEWithLogitsLoss
+from torch.nn.functional import one_hot
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import pytorch_lightning as pl
-from utils import LabelSmoothingCrossEntropy
+from autoencoder import ResCNNEncoder, DecoderRNN
 
 
 class LightningModel(pl.LightningModule):
@@ -31,19 +32,13 @@ class LightningModel(pl.LightningModule):
         """
         super().__init__()
         self.save_hyperparameters()
-        self.net = torch.hub.load('pytorch/vision:v0.7.0', 'densenet121', pretrained=False)
-        self.criterion = self._init_criterion()
+        if self.hparams.mode == '2d':
+            self.net = torch.hub.load('pytorch/vision:v0.7.0', 'densenet121', pretrained=False, num_classes=2)
+        elif self.hparams.mode == 'video':
+            self.encoder, self.decoder = ResCNNEncoder(), DecoderRNN(num_classes=2)
+        self.criterion = BCEWithLogitsLoss()
         self.accuracy  = pl.metrics.Accuracy()
-        
-    def _init_criterion(self) -> torch.nn:
-        """ returns the loss to be used by a LightningModel object,
-            possibly using label smoothing.
-        """
-        if self.hparams.use_label_smoothing:
-            return LabelSmoothingCrossEntropy(smoothing=self.hparams.smoothing,
-                                              reduction=self.hparams.reduction)
-        return CrossEntropyLoss()
-        
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """ Calls the forward method of self.net. 
 
@@ -53,7 +48,25 @@ class LightningModel(pl.LightningModule):
         Returns:
             torch.Tensor: Predicted class for each element of input batch. Shape: (N,).
         """
-        return self.net(x)
+        if self.hparams.mode=='2d':
+            return self.net(x)
+        if self.hparams.mode=='video':
+            return self.decoder(self.encoder(x))
+
+    def label_smoothing(self, one_hot_targets):
+        for target in one_hot_targets:
+            for x in target:
+                if x.item() == 0.:
+                    x += self.hparams.smoothing
+                else:
+                    x -= self.hparams.smoothing
+        return one_hot_targets
+
+    def encode_targets(self, targets, train=True):
+        one_hot_targets = one_hot(targets, num_classes=2).float()
+        if train and self.hparams.use_label_smoothing:
+            one_hot_targets = self.label_smoothing(one_hot_targets)
+        return one_hot_targets
 
     def configure_optimizers(self) -> Dict:
         """ Instanciate an optimizer and a learning rate scheduler to be used during training.
@@ -83,9 +96,10 @@ class LightningModel(pl.LightningModule):
                   from Lightning, e.g on_epoch_start, on_epoch_end, etc...
         """
         inputs, targets = batch
+        encoded_targets = self.encode_targets(targets)
         outputs = self(inputs)
-        loss    = self.criterion(outputs, targets)
-        acc     = self.accuracy(outputs, targets)
+        loss    = self.criterion(outputs, encoded_targets)
+        acc     = self.accuracy(outputs,  encoded_targets)
         self.log('Loss/Train', loss)
         self.log('Accuracy/Train', acc, prog_bar=True, logger=True)
         return {'loss': loss, 'acc': acc}
@@ -104,9 +118,10 @@ class LightningModel(pl.LightningModule):
                   from Lightning, e.g on_epoch_start, on_epoch_end, etc...
         """
         inputs, targets = batch
+        encoded_targets = self.encode_targets(targets, train=False)
         outputs = self(inputs)
-        loss    = self.criterion(outputs, targets)
-        acc     = self.accuracy(outputs, targets)
+        loss    = self.criterion(outputs, encoded_targets)
+        acc     = self.accuracy(outputs,  encoded_targets)
         self.log('Loss/Validation', loss)
         self.log('Accuracy/Validation', acc, logger=True)
         return {'val_loss': loss, 'acc': acc}
