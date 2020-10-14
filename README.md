@@ -70,8 +70,7 @@ Based on [Pytorch Lightning](https://github.com/PyTorchLightning/pytorch-lightni
 
 # Last Commit Changes Log
 
-- A Densenet based classifier and an Resnet+RNN autoencoder are now ready to be trained.
-- Add Label Smoothing.
+- Add fusion implementation from [Large-scale Video Classification with Convolutional Neural Networks](https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/42455.pdf)
 
 
 <!--
