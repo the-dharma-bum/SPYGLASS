@@ -1,7 +1,7 @@
 """ Base Model Class: A Lighning Module
 
 This class implements all the logic code.
-This model class will be the one to be fit by a Trainer
+This model class will be the one to be fit by a Trainer.
  """
 
 from typing import Tuple, Dict
@@ -17,6 +17,10 @@ from autoencoder import ResCNNEncoder, DecoderRNN
 class LightningModel(pl.LightningModule):
     
     """ LightningModule handling everything training related.
+
+    This model accepts to "mode", ie two (dataset,architecture) config:
+        - 'image': 2d dataset and a densenet classifier.
+        - 'video': 3d dataset and a ResNet+RNN autoencoder.
     
     Some attributes and methods used aren't explicitely defined here but comes from the
     LightningModule class. Please refer to the Lightning documentation for further details.
