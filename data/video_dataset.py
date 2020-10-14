@@ -113,7 +113,6 @@ class SpyGlassVideoDataset(Dataset):
         """
         capture = cv2.VideoCapture(video_file)
         frames = torch.FloatTensor(self.channels, self.time_depth, self.x_size, self.y_size)
-        failed_clip = False
         for t in range(self.time_depth):
             ret, frame = capture.read()
             if ret:
@@ -123,34 +122,25 @@ class SpyGlassVideoDataset(Dataset):
                 frame = frame.permute(2,0,1)
                 frames[:, t, :, :] = frame
             else:
-                print('Skipped')
-                failed_clip = True
-                break
-        return frames, failed_clip
+                print('Error while reading video.')
+        return frames
 
 
-    def __getitem__(self, index: int) -> Dict:
+    def __getitem__(self, index: int) -> Tuple[torch.FloatTensor, int]:
         """ Generates a sample from a dataset index.
 
         Args:
             index (int): a dataset index (in [1,98])
 
         Returns:
-            sample (Dict): A dict containing:
-                            - the 4d-tensor (C,T,W,H)
-                            - the target (int in [0,1])
-                            - a boolean falg for video reading 
+            sample (Tuple[torch.FloatTensor, int]): torch tensor of shape (C,T,W,H).
+                                                    int in [0,1].
         """
         video_file = os.path.join(self.input_root, self.input_list[index])
-        clip, failed_clip = self.read_video(video_file)
+        clip = self.read_video(video_file)
         if self.transform is not None:
             clip = self.transform(clip)
-        sample = {
-            'clip': clip,
-            'target': self.get_target(index),
-            'failed_clip': failed_clip 
-        }
-        return sample
+        return clip, self.get_target(index)
 
     def __len__(self) ->  int:
         return len(self.input_list)

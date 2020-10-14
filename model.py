@@ -53,7 +53,7 @@ class LightningModel(pl.LightningModule):
         Args:
             x (torch.Tensor): Input batch of shape:
                                 - (N,C,W,H) in image mode.
-                                - (N,T,W,H) in video mode.
+                                - (N,C,T,W,H) in video mode.
 
         Returns:
             torch.Tensor: Predicted class for each element of input batch. Shape: (N,num_classes).
@@ -149,7 +149,8 @@ class LightningModel(pl.LightningModule):
 
         Args:
             batch (torch.Tensor): Tuple of two tensor. 
-                                  One given to the network to be classified, of shape (N,C,W,H).
+                                  One given to the network to be classified,
+                                  of shape (N,C,W,H) if mode='image', else (N,C,T,W,H).
                                   The other being the target classes, of shape (N,).
             batch_idx ([type]): Dataset index of the batch. In range (dataset length)/(batch size).
 
@@ -157,10 +158,7 @@ class LightningModel(pl.LightningModule):
             Dict: Scalars computed in this function. Note that this dict is accesible from 'hooks' methods
                   from Lightning, e.g on_epoch_start, on_epoch_end, etc...
         """
-        if self.hparams.mode == 'image':
-            inputs, targets = batch
-        elif self.hparams.mode == 'video':
-            inputs, targets  = batch['clip'], batch['target']
+        inputs, targets = batch
         encoded_targets = self.encode_targets(targets)
         outputs = self(inputs)
         loss    = self.criterion(outputs, encoded_targets)
@@ -174,7 +172,8 @@ class LightningModel(pl.LightningModule):
 
         Args:
             batch (torch.Tensor): Tuple of two tensor. 
-                                  One given to the network to be classified, of shape (N,C,W,H).
+                                  One given to the network to be classified,
+                                  of shape (N,C,W,H) if mode='image', else (N,C,T,W,H).
                                   The other being the target classes, of shape (N,).
             batch_idx (int): Dataset index of the batch. In range (dataset length)/(batch size).
 
@@ -182,10 +181,7 @@ class LightningModel(pl.LightningModule):
             Dict: Scalars computed in this function. Note that this dict is accesible from 'hooks' methods
                   from Lightning, e.g on_epoch_start, on_epoch_end, etc...
         """
-        if self.hparams.mode == 'image':
-            inputs, targets = batch
-        elif self.hparams.mode == 'video':
-            inputs, targets  = batch['clip'], batch['target']
+        inputs, targets = batch
         encoded_targets = self.encode_targets(targets, train=False)
         outputs = self(inputs)
         loss    = self.criterion(outputs, encoded_targets)
