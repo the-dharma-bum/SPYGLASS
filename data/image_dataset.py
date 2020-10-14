@@ -11,13 +11,13 @@ Transform = NewType('Transform', Optional[Callable[[np.ndarray], torch.Tensor]])
 Batch     = NewType('Batch',     Union[Tuple[np.ndarray,int], np.ndarray])
 
 
-class SpyGlass2dDataset(Dataset):
+class SpyGlassImageDataset(Dataset):
 
-    """ Pytorch Dataset. It just overwrite __getitem__ and __len__ methods. """
+    """ Pytorch image Dataset. It just overwrite __getitem__ and __len__ methods. """
 
     def __init__(self, input_root: str, medical_data_csv_path: str=None,
                  train: Optional[bool]=True, transform: Transform=None) -> None:
-        """ Instanciate 2D SpyGlass Dataset.
+        """ Instanciate image SpyGlass Dataset.
 
         Args:
             input_root (str): The folder containing all the npz files.

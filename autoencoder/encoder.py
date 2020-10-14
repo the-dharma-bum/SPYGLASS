@@ -1,20 +1,29 @@
+""" Adapted from:
+https://github.com/HHTseng/video-classification/blob/master/ResNetCRNN/functions.py.
+"""
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
 
 
-# 2D CNN encoder using ResNet-152 pretrained
+
 class ResCNNEncoder(nn.Module):
-    def __init__(self, fc_hidden1=512, fc_hidden2=512, drop_p=0.3, CNN_embed_dim=300):
+
+    """ 2D CNN encoder using ResNet-152 pretrained. 
+    Notation:
+        (N,C,T,W,H) = (batch_size, num_channels, time_depth, x_size, y_size).
+    """
+
+    def __init__(self, fc_hidden1: int=512, fc_hidden2: int=512, drop_p: float=0.3, CNN_embed_dim: int=300):
         """Load the pretrained ResNet-152 and replace top fc layer."""
         super(ResCNNEncoder, self).__init__()
-
-        self.fc_hidden1, self.fc_hidden2 = fc_hidden1, fc_hidden2
-        self.drop_p = drop_p
-
+        self.fc_hidden1 = fc_hidden1
+        self.fc_hidden2 = fc_hidden2
+        self.drop_p     = drop_p
         resnet = models.resnet152(pretrained=True)
-        modules = list(resnet.children())[:-1]      # delete the last fc layer.
+        modules = list(resnet.children())[:-1] # delete the last fc layer.
         self.resnet = nn.Sequential(*modules)
         self.fc1 = nn.Linear(resnet.fc.in_features, fc_hidden1)
         self.bn1 = nn.BatchNorm1d(fc_hidden1, momentum=0.01)
@@ -22,7 +31,16 @@ class ResCNNEncoder(nn.Module):
         self.bn2 = nn.BatchNorm1d(fc_hidden2, momentum=0.01)
         self.fc3 = nn.Linear(fc_hidden2, CNN_embed_dim)
         
-    def forward(self, x_3d):
+    def forward(self, x_3d: torch.Tensor) -> torch.Tensor:
+        """ A usual resnet forward pass minus the last layer.
+        Hence acts as an encoder.
+
+        Args:
+            x_3d (torch.Tensor): Shape (N,C,T,W,H).
+                                 
+        Returns:
+            torch.Tensor: Shape (batch_size, num_channels, CNN_embed_dims).
+        """
         cnn_embed_seq = []
         for t in range(x_3d.size(1)):
             # ResNet CNN

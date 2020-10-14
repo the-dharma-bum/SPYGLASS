@@ -5,7 +5,8 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import LearningRateLogger, EarlyStopping, ModelCheckpoint
 from pytorch_lightning.callbacks import model_checkpoint
 from model import LightningModel
-from data import SpyGlassDataModule, Dataset2DGenerator
+from data import SpyGlassDataModule
+from data.utils import Dataset2DGenerator
 from config import Config
 
 
@@ -16,7 +17,7 @@ from config import Config
 # +-------------------------------------------------------------------------------------+ #
 
 def init_data(cfg):
-    if cfg.mode == '2d':
+    if cfg.mode == 'image':
         input_root = cfg.data_2d_root
     elif cfg.mode == 'video':
         input_root = cfg.video_root
@@ -67,7 +68,8 @@ def test(input_root, model_path):
 
 
 if __name__ == '__main__':
-    cfg = Config()
+    image_cfg, video_cfg = Config(mode='image'),Config(mode='video') 
     # make_2d_dataset(cfg)
-    run_training(cfg) 
+    # run_training(image_cfg)
+    run_training(video_cfg) 
 
