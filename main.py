@@ -21,8 +21,8 @@ def init_data(cfg):
         input_root = cfg.data_2d_root
     elif cfg.mode == 'video':
         input_root = cfg.video_root
-    return SpyGlassDataModule(input_root, cfg.channels, cfg.time_depth, 
-                              cfg.x_size, cfg.y_size, cfg.medical_data_csv_path, cfg.mode,
+    return SpyGlassDataModule(input_root, cfg.channels, cfg.x_size, cfg.y_size,
+                              cfg.medical_data_csv_path, cfg.mode,
                               cfg.train_batch_size, cfg.val_batch_size, cfg.num_workers)
 
 def init_model(cfg):

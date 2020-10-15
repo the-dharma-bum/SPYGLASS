@@ -31,7 +31,7 @@ class Config:
                     This will be used in data/make_2d_dataset.center_crop()/
                     Note that this procedure could be avoided by doing the following:
                         1. Save 2d images of different size in make_2d_dataset.py
-                        2. Resize each batch just before training by applying the RandomCrop transform. 
+                        2. Resize each batch just before training by applying Crop transform(s). 
 
         train_batch_size (int): Batch size of the training dataloader.
 
@@ -51,9 +51,8 @@ class Config:
     video_root:            str = "/homes/l17vedre/Bureau/Sanssauvegarde/cropped"
     data_2d_root:          str = "/homes/l17vedre/Bureau/Sanssauvegarde/2D_sampling1"
     medical_data_csv_path: str = "/homes/l17vedre/SPYGLASS/medical_data.csv"
-    mode:                  str = 'image' 
+    mode:                  str = 'video' 
     channels:              int = 3
-    time_depth:            int = 25*1 # first 1 seconds
     x_size:                int = 224
     y_size:                int = 224   
     sampling_factor:       int = 10

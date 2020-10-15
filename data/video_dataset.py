@@ -22,18 +22,15 @@ class SpyGlassVideoDataset(Dataset):
         (N,C,T,W,H) = (batch_size, num_channels, time_depth, x_size, y_size).
     """
 
-    def __init__(self, input_root: str, channels: int, time_depth: int,
-                 x_size: int, y_size: int, mean: List[float], std: List[float],
-                 medical_data_csv_path: str=None, transform: Transform=None) -> None:
+    def __init__(self, input_root: str, channels: int, x_size: int, y_size: int,
+                 mean: List[float], std: List[float], medical_data_csv_path: str=None, 
+                 transform: Transform=None) -> None:
         """ Instanciate video SpyGlass Dataset.
 
         Args:
             input_root (str): The folder containing all the npz files.
 
             channels (int): Number of channels of each video frame.
-
-            time_depth (int): Number of frames to take per video. 
-                              For now, we only take the first time_depth frames of each video.
 
             x_size, y_size (int, int): Frame sizes. Will apply center cropping if needed.
 
@@ -51,7 +48,6 @@ class SpyGlassVideoDataset(Dataset):
         self.input_root   = input_root
         self.input_list   = sorted(os.listdir(input_root))
         self.channels     = channels
-        self.time_depth   = time_depth
         self.x_size       = x_size
         self.y_size       = y_size
         self.mean         = mean
@@ -64,14 +60,11 @@ class SpyGlassVideoDataset(Dataset):
         """ Gets a binary label (0: benign, 1: malign).
 
         Args:
-            patient_index (int): The patient_index ([1,98]) obtained from 
-                                 the dataset index.
+            patient_index (int): The patient_index ([1,98]) obtained from the dataset index.
 
         Returns:
-            int: A binary label (ie 0 or 1).
-                 If the corresponding label line in the medical_data csv 
-                 is >= 5 (ie 5 or 6), retunrs 0, else returns 1. 
-                 See presentation_data.pdf.
+            int: A binary label (ie 0 or 1). If the corresponding label line in the medical_data csv 
+                 is >= 5 (ie 5 or 6), retunrs 0, else returns 1. See presentation_data.pdf.
         """
         target = 0 if self.medical_data.loc[patient_index].label >= 5 else 1
         return target
@@ -100,31 +93,32 @@ class SpyGlassVideoDataset(Dataset):
         """
         return (frame-self.mean)/self.std
 
-    def read_video(self, video_file: str) -> Tuple[torch.FloatTensor, bool]:
-        """ Stack as many frames as self.time_depth in a tensor.
+    def read_video(self, video_file: str) -> torch.FloatTensor:
+        """ Stack all video frames in a tensor.
         Apply cropping and normalization.  
 
         Args:
             video_file (str): A video path.
 
         Returns:
-            Tuple[torch.FloatTensor, bool]: Tensor of shape (C,T,W,H).
-                                            Boolean as a flag for video reading.
+            torch.FloatTensor: Tensor of shape (C,T,W,H).
         """
         capture = cv2.VideoCapture(video_file)
-        frames = torch.FloatTensor(self.channels, self.time_depth, self.x_size, self.y_size)
-        for t in range(self.time_depth):
+        frames = [] # list of torch.FloatTensor of shape (self.channels, self.x_size, self.y_size)
+        last_frame = False
+        while not last_frame:
             ret, frame = capture.read()
             if ret:
                 frame = self.center_crop(self.normalize(frame))
                 frame = torch.from_numpy(frame)
                 # from channel last to channel first: (W,H,C) -> (C,W,H)
                 frame = frame.permute(2,0,1)
-                frames[:, t, :, :] = frame
+                frames.append(frame)
             else:
-                print('Error while reading video.')
+                last_frame = True
+        # stack and transpose from (T,C,W,H) to (C,T,W,H)
+        frames = torch.stack(frames, dim=0).transpose_(0, 1)
         return frames
-
 
     def __getitem__(self, index: int) -> Tuple[torch.FloatTensor, int]:
         """ Generates a sample from a dataset index.

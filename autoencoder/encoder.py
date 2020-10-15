@@ -37,7 +37,7 @@ class ResCNNEncoder(nn.Module):
             x_3d (torch.Tensor): Shape (N,C,T,W,H).
                                  
         Returns:
-            torch.Tensor: Shape (batch_size, num_channels, CNN_embed_dims).
+            torch.Tensor: Shape (batch_size, time_depth, CNN_embed_dims).
         """
         cnn_embed_seq = []
         for t in range(x_3d.size(1)):
@@ -53,7 +53,6 @@ class ResCNNEncoder(nn.Module):
             x = F.dropout(x, p=self.drop_p, training=self.training)
             x = self.fc3(x)
             cnn_embed_seq.append(x)
-        # swap time and sample dim such that (sample dim, time dim, CNN latent dim)
+        # swap time_depth and batch_size
         cnn_embed_seq = torch.stack(cnn_embed_seq, dim=0).transpose_(0, 1)
-        # cnn_embed_seq: shape=(batch, time_step, input_size)
         return cnn_embed_seq
