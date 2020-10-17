@@ -18,7 +18,7 @@ class SpyGlassDataModule(LightningDataModule):
     """ Generates three dataloaders (train, eval, test) to be used by a Lightning Model. """
 
     def __init__(self, input_root: str, channels: int, x_size: int, y_size: int,
-                 medical_data_csv_path: str=None, mode: str='image',
+                 medical_data_csv_path: str=None,
                  train_batch_size: int=64, val_batch_size: int=64, num_workers: int=4) -> None:
         """ Instanciate a Pytorch Lightning DataModule.
 
@@ -54,46 +54,12 @@ class SpyGlassDataModule(LightningDataModule):
         self.num_workers      = num_workers
         # value obtained by calling data.get_dataset_stats.get_mean_std_dataset()
         self.mean, self.std = [78.5606, 111.8194, 135.2136], [64.6343,  72.6750,  69.9263]
-        self.mode = mode
         self.train_transform, self.test_transform = self.init_transforms()
 
     def init_transforms(self):
-        assert self.mode in ['image', 'video'], "mode must be 'image' or 'video'"
-        if self.mode=='image':
-            train_transform = transforms.Compose([
-                transforms.ToPILImage(), # most pytorch transforms work on PIL image
-                transforms.RandomCrop(200),
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(), # Normalize works on Tensor though
-                transforms.Normalize(mean=self.mean,std=self.std)
-            ])
-            test_transform = transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize(mean=self.mean,std=self.std)
-            ])
-            return train_transform, test_transform
+        """ To be implemented. """
+        #TODO: make transforms that perfom on video.
         return None, None
-
-    def init_full_dataset(self, train=True, transform=None) -> torch.utils.data.dataset.Dataset:
-        """ Instanciate an image or a video dataset.
-
-        Args:
-            train (bool, optional): Controls if get_item() returns a target or not.
-                                    Defaults to True.
-            transform (Transform, optional): Pytorch transform to apply on batch.
-                                             Defaults to None.
-
-        Returns:
-            torch.utils.data.dataset.Dataset: An image or video dataset.
-        """
-        assert self.mode in ['image', 'video'], "mode must be 'image' or 'video'"
-        if self.mode=='image':
-            return SpyGlassImageDataset(self.input_root, self.medical_data_csv_path, 
-                                        train=train, transform=self.train_transform)
-        elif self.mode=='video':
-            return SpyGlassVideoDataset(self.input_root, self.channels,
-                                        self.x_size, self.y_size, self.mean, self.std,
-                                        self.medical_data_csv_path, transform=transform)
 
     def setup(self, stage: str=None) -> None:
         """ Basically nothing more than train/val split.
@@ -111,22 +77,21 @@ class SpyGlassDataModule(LightningDataModule):
         if stage == 'fit' or stage is None:
             # if stage is not 'test', medical_data_csv_path should have been set during datamodule instanciation.
             assert self.medical_data_csv_path is not None, "did you forget to specify stage='test' ?"
-            spyglass_full = self.init_full_dataset(train=True, transform=self.train_transform)
+            spyglass_full = SpyGlassVideoDataset(self.input_root, self.channels, self.x_size, self.y_size,
+                                    self.mean, self.std, self.medical_data_csv_path, transform=self.train_transform)
             self.spyglass_train, self.spyglass_val = random_split(spyglass_full, [train_length, val_length])
         if stage == 'test' or stage is None:
-            self.spyglass_test = self.init_full_dataset(train=False, transform=self.test_transform)
+            self.spyglass_test = SpyGlassVideoDataset(self.input_root, self.channels, self.x_size, self.y_size,
+                                    self.mean, self.std, self.medical_data_csv_path, transform=self.test_transform)
 
     def train_dataloader(self) -> DataLoader:
-        assert self.num_workers <= 2, "num_workers should be <= 2 to read video frames."
         return DataLoader(self.spyglass_train, num_workers=self.num_workers,
                           batch_size=self.train_batch_size, shuffle=True)
 
     def val_dataloader(self) -> DataLoader:
-        assert self.num_workers <= 2, "num_workers should be <= 2 to read video frames."
         return DataLoader(self.spyglass_val, num_workers=self.num_workers, 
                           batch_size=self.val_batch_size, shuffle=False)
 
     def test_dataloader(self) -> DataLoader:
-        assert self.num_workers <= 2, "num_workers should be <= 2 to read video frames."
         return DataLoader(self.spyglass_test, num_workers=self.num_workers,
                           batch_size=self.val_batch_size, shuffle=False)

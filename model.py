@@ -12,15 +12,12 @@ from torch.nn.functional import one_hot
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import pytorch_lightning as pl
 from autoencoder import ResCNNEncoder, DecoderRNN
+from fusion import Fusion
 
 
 class LightningModel(pl.LightningModule):
     
     """ LightningModule handling everything training related.
-
-    This model accepts to "mode", ie two (dataset,architecture) config:
-        - 'image': 2d dataset and a densenet classifier.
-        - 'video': 3d dataset and a ResNet+RNN autoencoder.
     
     Some attributes and methods used aren't explicitely defined here but comes from the
     LightningModule class. Please refer to the Lightning documentation for further details.
@@ -36,32 +33,27 @@ class LightningModel(pl.LightningModule):
         """
         super().__init__()
         self.save_hyperparameters()
-        if self.hparams.mode == 'image':
-            self.net = torch.hub.load('pytorch/vision:v0.7.0', 'densenet121', pretrained=False, num_classes=2)
-        elif self.hparams.mode == 'video':
-            self.encoder, self.decoder = ResCNNEncoder(), DecoderRNN(num_classes=2)
+        self.net = torch.hub.load('pytorch/vision:v0.7.0', 'densenet121', pretrained=False, num_classes=2)
+        self.fusion = Fusion(self.net)
+        #self.encoder, self.decoder = ResCNNEncoder(), DecoderRNN(num_classes=2)
         self.criterion = BCEWithLogitsLoss()
         self.accuracy  = pl.metrics.Accuracy()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """ If in image mode, returns the output of a classic densenet classifier.
-        If in video mode, returns the output of an autoencoder (Resnet, RNN).
+        """ Returns fusion(encoder, decoder).
 
         Notation:
             (N,C,T,W,H) = (batch_size, num_channels, time_depth, x_size, y_size).
 
         Args:
-            x (torch.Tensor): Input batch of shape:
-                                - (N,C,W,H) in image mode.
-                                - (N,C,T,W,H) in video mode.
+            x (torch.Tensor): Input batch of shape (N,C,T,W,H).
 
         Returns:
             torch.Tensor: Predicted class for each element of input batch. Shape: (N,num_classes).
         """
-        if self.hparams.mode=='image':
-            return self.net(x)
-        if self.hparams.mode=='video':
-            return self.decoder(self.encoder(x))
+        self.fusion.device = self.device
+        return self.fusion.late_fusion(x)
+        #return self.decoder(self.encoder(x))
 
     def label_smoothing(self, one_hot_targets: torch.Tensor) -> torch.Tensor:
         """ The one true label will be 1-epsilon instead of 1,
@@ -99,16 +91,15 @@ class LightningModel(pl.LightningModule):
 
     def get_arch_parameters(self) -> torch.nn.parameter.Parameter:
         """ Get current architecture parameters (to give them to an optimizer).
-
-        If in video mode, concatenate encoder and decoder params.
+        
         Handles multi GPUs training by using DataParallel if needed.
 
         Returns:
             torch.nn.parameter.Parameter: cnn or crnn parameters.
         """
-        if self.hparams.mode == 'image':
-            return self.net.parameters()
-        # Bellow code is for video mode.
+        #TODO: Get encoder & decoder params. Maybe by making a get_params() method 
+        #      in Encoder and Decoder class.
+        #return self.net.parameters()
         # Parallelize model to multiple GPUs if needed.
         if torch.cuda.device_count() > 1:
             cnn_encoder = DataParallel(self.encoder)
@@ -129,6 +120,7 @@ class LightningModel(pl.LightningModule):
                           list(self.encoder.fc3.parameters()) + \
                           list(self.decoder.parameters())
         return crnn_params
+        return self.net.parameters()
 
     def configure_optimizers(self) -> Dict:
         """ Instanciate an optimizer and a learning rate scheduler to be used during training.
@@ -149,8 +141,7 @@ class LightningModel(pl.LightningModule):
 
         Args:
             batch (torch.Tensor): Tuple of two tensor. 
-                                  One given to the network to be classified,
-                                  of shape (N,C,W,H) if mode='image', else (N,C,T,W,H).
+                                  One given to the network to be classified, of shape (N,C,T,W,H).
                                   The other being the target classes, of shape (N,).
             batch_idx ([type]): Dataset index of the batch. In range (dataset length)/(batch size).
 
@@ -172,8 +163,7 @@ class LightningModel(pl.LightningModule):
 
         Args:
             batch (torch.Tensor): Tuple of two tensor. 
-                                  One given to the network to be classified,
-                                  of shape (N,C,W,H) if mode='image', else (N,C,T,W,H).
+                                  One given to the network to be classified, of shape (N,C,T,W,H).
                                   The other being the target classes, of shape (N,).
             batch_idx (int): Dataset index of the batch. In range (dataset length)/(batch size).
 

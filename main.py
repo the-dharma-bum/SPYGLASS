@@ -68,8 +68,7 @@ def test(input_root, model_path):
 
 
 if __name__ == '__main__':
-    image_cfg, video_cfg = Config(mode='image'),Config(mode='video') 
+    cfg = Config() 
     # make_2d_dataset(cfg)
-    # run_training(image_cfg)
-    run_training(video_cfg) 
+    run_training(cfg) 
 

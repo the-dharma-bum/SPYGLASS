@@ -20,8 +20,6 @@ class Config:
                                      training in data/dataset.py.
                                      Can be None for testing.
 
-        mode (str): 'image' or 'video'. Pipeline mode.
-
         sampling_factor (int): When creating a 2d dataset from the videos, a certain amout of frames
                                is selected. This param controls how many frames to keep in the 2d 
                                dataset (one out of sampling_factor.)
@@ -50,15 +48,14 @@ class Config:
 
     video_root:            str = "/homes/l17vedre/Bureau/Sanssauvegarde/cropped"
     data_2d_root:          str = "/homes/l17vedre/Bureau/Sanssauvegarde/2D_sampling1"
-    medical_data_csv_path: str = "/homes/l17vedre/SPYGLASS/medical_data.csv"
-    mode:                  str = 'video' 
+    medical_data_csv_path: str = "/homes/l17vedre/SPYGLASS/medical_data.csv" 
     channels:              int = 3
     x_size:                int = 224
     y_size:                int = 224   
     sampling_factor:       int = 10
     crop:                  int = 400
-    train_batch_size:      int = 2
-    val_batch_size:        int = 2
+    train_batch_size:      int = 1
+    val_batch_size:        int = 1
     num_workers:           int = 4
-    use_label_smoothing:  bool = True
+    use_label_smoothing:  bool = False
     smoothing:           float = 0.1                 

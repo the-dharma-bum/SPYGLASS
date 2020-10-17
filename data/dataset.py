@@ -52,6 +52,7 @@ class SpyGlassVideoDataset(Dataset):
         self.y_size       = y_size
         self.mean         = mean
         self.std          = std
+        self.sampling     = 25 #TODO: defines this in init, in config, and in call to this dataset.
         if medical_data_csv_path is not None:
             self.medical_data = pd.read_csv(medical_data_csv_path)
         self.transform    = transform
@@ -104,30 +105,28 @@ class SpyGlassVideoDataset(Dataset):
             torch.FloatTensor: Tensor of shape (C,T,W,H).
         """
         capture = cv2.VideoCapture(video_file)
-        frames = [] # list of torch.FloatTensor of shape (self.channels, self.x_size, self.y_size)
-        last_frame = False
-        while not last_frame:
-            ret, frame = capture.read()
-            if ret:
+        time_depth = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
+        frames = torch.FloatTensor(self.channels, time_depth, self.x_size, self.y_size)
+        frames_count = 0
+        for t in range(time_depth):
+            _, frame = capture.read()
+            frames_count += 1
+            if frames_count%self.sampling == 0:
                 frame = self.center_crop(self.normalize(frame))
                 frame = torch.from_numpy(frame)
                 # from channel last to channel first: (W,H,C) -> (C,W,H)
                 frame = frame.permute(2,0,1)
-                frames.append(frame)
-            else:
-                last_frame = True
-        # stack and transpose from (T,C,W,H) to (C,T,W,H)
-        frames = torch.stack(frames, dim=0).transpose_(0, 1)
+                frames[:,t,:,:] = frame
         return frames
 
     def __getitem__(self, index: int) -> Tuple[torch.FloatTensor, int]:
         """ Generates a sample from a dataset index.
 
         Args:
-            index (int): a dataset index (in [1,98])
+            index (int): A dataset index (in [1,98])
 
         Returns:
-            sample (Tuple[torch.FloatTensor, int]): torch tensor of shape (C,T,W,H).
+            sample (Tuple[torch.FloatTensor, int]): Torch tensor of shape (C,T,W,H).
                                                     int in [0,1].
         """
         video_file = os.path.join(self.input_root, self.input_list[index])
