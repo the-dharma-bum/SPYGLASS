@@ -1,10 +1,10 @@
 from tqdm import tqdm
 import torch
-from data import SpyGlassDataModule
 from typing import Tuple
+from pytorch_lightning import LightningDataModule
 
 
-def get_mean_std_dataset(input_root: str) -> Tuple[torch.Tensor, torch.Tensor]:
+def get_mean_std_dataset(datamodule: LightningDataModule) -> Tuple[torch.Tensor, torch.Tensor]:
     """ Adapted from:
     https://discuss.pytorch.org/t/about-normalization-using-pre-trained-vgg16-networks/23560/6
 
@@ -15,7 +15,6 @@ def get_mean_std_dataset(input_root: str) -> Tuple[torch.Tensor, torch.Tensor]:
         Tuple[torch.Tensor, torch.Tensor]: Two tensors of size 3 containing the mean and std 
                                            per channels.
     """
-    datamodule = SpyGlassDataModule(input_root)
     datamodule.setup(stage='test')
     dataloader = datamodule.test_dataloader()
     mean, std = 0., 0.

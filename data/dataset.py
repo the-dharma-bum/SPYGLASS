@@ -14,6 +14,7 @@ from typing import List, Tuple, Dict, Optional, Union, Callable, NewType
 # Type hint
 Transform = NewType('Transform', Optional[Callable[[np.ndarray], torch.Tensor]])
 
+
 class SpyGlassVideoDataset(Dataset):
 
     """ Pytorch Video Dataset. 
@@ -23,8 +24,8 @@ class SpyGlassVideoDataset(Dataset):
     """
 
     def __init__(self, input_root: str, channels: int, x_size: int, y_size: int,
-                 mean: List[float], std: List[float], medical_data_csv_path: str=None, 
-                 transform: Transform=None) -> None:
+                 mean: List[float], std: List[float], sampling: int=25, 
+                 medical_data_csv_path: str=None, transform: Transform=None) -> None:
         """ Instanciate video SpyGlass Dataset.
 
         Args:
@@ -37,6 +38,8 @@ class SpyGlassVideoDataset(Dataset):
             mean (List[float]): Mean of the whole dataset over each channels.
 
             std (List[float]): Standard deviation of the whole dataset over each channels.
+            
+            sampling (int): Sampling rate: takes one frame every sampling frames.
 
             medical_data_csv_path (str, optional): The csv file containing the label for the 98 patients.
                                                    It is not required while testing.
@@ -52,10 +55,14 @@ class SpyGlassVideoDataset(Dataset):
         self.y_size       = y_size
         self.mean         = mean
         self.std          = std
-        self.sampling     = 25 #TODO: defines this in init, in config, and in call to this dataset.
+        self.sampling     = sampling
         if medical_data_csv_path is not None:
             self.medical_data = pd.read_csv(medical_data_csv_path)
         self.transform    = transform
+    
+    def get_patient_index(self, dataset_index) -> int:
+        indexed_file = self.input_list[dataset_index]
+        return int(indexed_file.split('_')[0]) - 1
 
     def get_target(self, patient_index: int) -> int:
         """ Gets a binary label (0: benign, 1: malign).
@@ -95,7 +102,7 @@ class SpyGlassVideoDataset(Dataset):
         return (frame-self.mean)/self.std
 
     def read_video(self, video_file: str) -> torch.FloatTensor:
-        """ Stack all video frames in a tensor.
+        """ Stack sampled video frames in a tensor.
         Apply cropping and normalization.  
 
         Args:
@@ -106,17 +113,18 @@ class SpyGlassVideoDataset(Dataset):
         """
         capture = cv2.VideoCapture(video_file)
         time_depth = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
-        frames = torch.FloatTensor(self.channels, time_depth, self.x_size, self.y_size)
+        output_depth = int(time_depth / self.sampling) + 1
+        frames = torch.FloatTensor(self.channels, output_depth, self.x_size, self.y_size)
         frames_count = 0
         for t in range(time_depth):
             _, frame = capture.read()
-            frames_count += 1
-            if frames_count%self.sampling == 0:
+            if frames_count % self.sampling == 0:
                 frame = self.center_crop(self.normalize(frame))
                 frame = torch.from_numpy(frame)
                 # from channel last to channel first: (W,H,C) -> (C,W,H)
                 frame = frame.permute(2,0,1)
                 frames[:,t,:,:] = frame
+            frames_count += 1
         return frames
 
     def __getitem__(self, index: int) -> Tuple[torch.FloatTensor, int]:
@@ -133,7 +141,7 @@ class SpyGlassVideoDataset(Dataset):
         clip = self.read_video(video_file)
         if self.transform is not None:
             clip = self.transform(clip)
-        return clip, self.get_target(index)
+        return clip, self.get_target(self.get_patient_index(index))
 
     def __len__(self) ->  int:
         return len(self.input_list)

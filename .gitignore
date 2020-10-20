@@ -17,7 +17,7 @@ lightning_logs/
 **.pt
 
 # Test
-test.py
+test*.py
 
 # Vscode
 .vscode/

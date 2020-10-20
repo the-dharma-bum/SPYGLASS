@@ -5,9 +5,11 @@ https://github.com/HHTseng/video-classification/blob/master/ResNetCRNN/functions
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.modules.rnn import RNN
+import pytorch_lightning as pl
 
 
-class DecoderRNN(nn.Module):
+class DecoderRNN(pl.LightningModule):
 
     """ RNN decoder: LSTM followed by linear. """
 
@@ -34,6 +36,13 @@ class DecoderRNN(nn.Module):
                             num_layers=h_RNN_layers, batch_first=True)
         self.fc1 = nn.Linear(self.h_RNN, self.h_FC_dim)
         self.fc2 = nn.Linear(self.h_FC_dim, self.num_classes)
+    
+    def init_outputs_tensor(self, RNN_out_tensor: torch.Tensor) -> torch.Tensor:
+        batch_size, time_depth = RNN_out_tensor.size(0), RNN_out_tensor.size(1)
+        outputs = torch.FloatTensor(batch_size, time_depth, self.num_classes)
+        if torch.cuda.is_available():
+            outputs = outputs.cuda()
+        return outputs, time_depth
 
     def forward(self, x_RNN: torch.Tensor) -> torch.Tensor:
         """ Decode a tensor already passed through a CNN.
@@ -44,16 +53,19 @@ class DecoderRNN(nn.Module):
         RNN_out has shape (batch, time_step, output_size).
 
         Args:
-            x_RNN (torch.Tensor): Shape (batch_size, num_channels, CNN_embed_dims).
+            x_RNN (torch.Tensor): Shape (batch_size, time_depth, CNN_embed_dims).
 
         Returns:
             torch.Tensor: Shape (batch_size, num_classes).
         """
         self.LSTM.flatten_parameters()
-        RNN_out, (h_n, h_c) = self.LSTM(x_RNN, None)  
-        # FC layers
-        x = self.fc1(RNN_out[:, -1, :]) # choose RNN_out at the last time step.
-        x = F.relu(x)
-        x = F.dropout(x, p=self.drop_p, training=self.training)
-        x = self.fc2(x)
-        return x
+        RNN_out, (h_n, h_c) = self.LSTM(x_RNN, None)
+        outputs, time_depth = self.init_outputs_tensor(RNN_out)
+        for t in range(time_depth):
+            ## FC layers
+            x = self.fc1(RNN_out[:, t, :])
+            x = F.relu(x)
+            x = F.dropout(x, p=self.drop_p, training=self.training)
+            x = self.fc2(x)
+            outputs[:,t,:] = x
+        return outputs

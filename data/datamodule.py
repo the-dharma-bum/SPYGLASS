@@ -5,7 +5,7 @@ import torch
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import random_split, DataLoader
 from torchvision import transforms
-from data import SpyGlassImageDataset, SpyGlassVideoDataset
+from data import SpyGlassVideoDataset
 from typing import Optional, Callable, NewType
 
 
@@ -18,7 +18,7 @@ class SpyGlassDataModule(LightningDataModule):
     """ Generates three dataloaders (train, eval, test) to be used by a Lightning Model. """
 
     def __init__(self, input_root: str, channels: int, x_size: int, y_size: int,
-                 medical_data_csv_path: str=None,
+                 sampling: int, medical_data_csv_path: str=None, 
                  train_batch_size: int=64, val_batch_size: int=64, num_workers: int=4) -> None:
         """ Instanciate a Pytorch Lightning DataModule.
 
@@ -32,6 +32,8 @@ class SpyGlassDataModule(LightningDataModule):
             mean (List[float]): Mean of the whole dataset over each channels.
 
             std (List[float]): Standard deviation of the whole dataset over each channels.
+
+            samplint (int): Sampling rate of video reading. Takes one frame every sampling frames.
 
             medical_data_csv_path (str): The csv file containing the label for the 98 patients.
 
@@ -47,6 +49,7 @@ class SpyGlassDataModule(LightningDataModule):
         self.channels   = channels
         self.x_size     = x_size
         self.y_size     = y_size
+        self.sampling   = sampling
         if medical_data_csv_path is not None:
             self.medical_data_csv_path = medical_data_csv_path
         self.train_batch_size = train_batch_size
@@ -78,11 +81,13 @@ class SpyGlassDataModule(LightningDataModule):
             # if stage is not 'test', medical_data_csv_path should have been set during datamodule instanciation.
             assert self.medical_data_csv_path is not None, "did you forget to specify stage='test' ?"
             spyglass_full = SpyGlassVideoDataset(self.input_root, self.channels, self.x_size, self.y_size,
-                                    self.mean, self.std, self.medical_data_csv_path, transform=self.train_transform)
+                                                 self.mean, self.std,  self.sampling, self.medical_data_csv_path,
+                                                 transform=self.train_transform)
             self.spyglass_train, self.spyglass_val = random_split(spyglass_full, [train_length, val_length])
         if stage == 'test' or stage is None:
             self.spyglass_test = SpyGlassVideoDataset(self.input_root, self.channels, self.x_size, self.y_size,
-                                    self.mean, self.std, self.medical_data_csv_path, transform=self.test_transform)
+                                                      self.mean, self.std, self.sampling, self.medical_data_csv_path,
+                                                      transform=self.test_transform)
 
     def train_dataloader(self) -> DataLoader:
         return DataLoader(self.spyglass_train, num_workers=self.num_workers,

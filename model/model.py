@@ -1,8 +1,6 @@
 """ Base Model Class: A Lighning Module
-
-This class implements all the logic code.
-This model class will be the one to be fit by a Trainer.
- """
+This class implements all the logic code and will be the one to be fit by a Trainer.
+"""
 
 from typing import Tuple, Dict
 import torch
@@ -11,8 +9,7 @@ from torch.nn import BCEWithLogitsLoss, DataParallel
 from torch.nn.functional import one_hot
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import pytorch_lightning as pl
-from autoencoder import ResCNNEncoder, DecoderRNN
-from fusion import Fusion
+from .utils import init_encoder, init_decoder, init_fusion, init_aggregation
 
 
 class LightningModel(pl.LightningModule):
@@ -33,9 +30,10 @@ class LightningModel(pl.LightningModule):
         """
         super().__init__()
         self.save_hyperparameters()
-        self.net = torch.hub.load('pytorch/vision:v0.7.0', 'densenet121', pretrained=False, num_classes=2)
-        self.fusion = Fusion(self.net)
-        #self.encoder, self.decoder = ResCNNEncoder(), DecoderRNN(num_classes=2)
+        self.encoder = init_encoder(self.hparams)
+        self.decoder = init_decoder(self.hparams)
+        self.fusion  = init_fusion(self.encoder, self.hparams)
+        self.aggregate = init_aggregation(self.hparams)
         self.criterion = BCEWithLogitsLoss()
         self.accuracy  = pl.metrics.Accuracy()
 
@@ -51,9 +49,9 @@ class LightningModel(pl.LightningModule):
         Returns:
             torch.Tensor: Predicted class for each element of input batch. Shape: (N,num_classes).
         """
-        self.fusion.device = self.device
-        return self.fusion.late_fusion(x)
-        #return self.decoder(self.encoder(x))
+        features = self.fusion(x)
+        outputs  = self.decoder(features)
+        return self.aggregate(outputs)
 
     def label_smoothing(self, one_hot_targets: torch.Tensor) -> torch.Tensor:
         """ The one true label will be 1-epsilon instead of 1,
@@ -101,6 +99,7 @@ class LightningModel(pl.LightningModule):
         #      in Encoder and Decoder class.
         #return self.net.parameters()
         # Parallelize model to multiple GPUs if needed.
+        """
         if torch.cuda.device_count() > 1:
             cnn_encoder = DataParallel(self.encoder)
             rnn_decoder = DataParallel(self.decoder)
@@ -120,7 +119,8 @@ class LightningModel(pl.LightningModule):
                           list(self.encoder.fc3.parameters()) + \
                           list(self.decoder.parameters())
         return crnn_params
-        return self.net.parameters()
+        """
+        return list(self.fusion.parameters()) + list(self.decoder.parameters())
 
     def configure_optimizers(self) -> Dict:
         """ Instanciate an optimizer and a learning rate scheduler to be used during training.
@@ -128,7 +128,7 @@ class LightningModel(pl.LightningModule):
         Returns:
             (Dict): Dict containing the optimizer(s) and learning rate scheduler(s) to be used by a Trainer
                     object using this model. 
-                    The monitor key is used by the ReduceLROnPlateau scheduler.                        
+                    The 'monitor' key is used by the ReduceLROnPlateau scheduler.                        
         """
         optimizer = SGD(self.get_arch_parameters(), lr=0.001, momentum=0.9, nesterov=True, weight_decay=5e-4)
         scheduler = ReduceLROnPlateau(optimizer, mode = 'min', factor=0.2, patience=5, verbose=True)
@@ -164,7 +164,7 @@ class LightningModel(pl.LightningModule):
         Args:
             batch (torch.Tensor): Tuple of two tensor. 
                                   One given to the network to be classified, of shape (N,C,T,W,H).
-                                  The other being the target classes, of shape (N,).
+                                  The other being the target classes, of shape (batch_size, num_classes).
             batch_idx (int): Dataset index of the batch. In range (dataset length)/(batch size).
 
         Returns:
