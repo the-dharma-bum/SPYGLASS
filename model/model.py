@@ -2,14 +2,12 @@
 This class implements all the logic code and will be the one to be fit by a Trainer.
 """
 
-from typing import Tuple, Dict
 import torch
-from torch.optim import SGD
-from torch.nn import BCEWithLogitsLoss, DataParallel
+from torch.nn import BCEWithLogitsLoss
 from torch.nn.functional import one_hot
-from torch.optim.lr_scheduler import ReduceLROnPlateau
 import pytorch_lightning as pl
-from .utils import init_encoder, init_decoder, init_fusion, init_aggregation
+from typing import Tuple, Dict
+from .utils import Builder
 
 
 class LightningModel(pl.LightningModule):
@@ -25,15 +23,16 @@ class LightningModel(pl.LightningModule):
 
     def __init__(self, **kwargs) -> None:
         """ Instanciate a Lightning Model. 
-        The call to the Lightning method save_hyperparameters() make every hp
-        accessible through self.hparams. e.g: self.hparams.use_label_smoothing.
+        The call to the Lightning method save_hyperparameters() make every hp accessible through
+        self.hparams. e.g: self.hparams.use_label_smoothing. It also sends them to TensorBoard.
+        See model.utils.init_model to see them all.
         """
         super().__init__()
         self.save_hyperparameters()
-        self.encoder = init_encoder(self.hparams)
-        self.decoder = init_decoder(self.hparams)
-        self.fusion  = init_fusion(self.encoder, self.hparams)
-        self.aggregate = init_aggregation(self.hparams)
+        self.builder   = Builder(self.hparams)
+        self.fusion    = self.builder.fusion(self.builder.encoder())
+        self.decoder   = self.builder.decoder()
+        self.aggregate = self.builder.aggregation()
         self.criterion = BCEWithLogitsLoss()
         self.accuracy  = pl.metrics.Accuracy()
 
@@ -49,9 +48,7 @@ class LightningModel(pl.LightningModule):
         Returns:
             torch.Tensor: Predicted class for each element of input batch. Shape: (N,num_classes).
         """
-        features = self.fusion(x)
-        outputs  = self.decoder(features)
-        return self.aggregate(outputs)
+        return self.aggregate(self.decoder(self.fusion(x)))
 
     def label_smoothing(self, one_hot_targets: torch.Tensor) -> torch.Tensor:
         """ The one true label will be 1-epsilon instead of 1,
@@ -87,41 +84,6 @@ class LightningModel(pl.LightningModule):
             one_hot_targets = self.label_smoothing(one_hot_targets)
         return one_hot_targets
 
-    def get_arch_parameters(self) -> torch.nn.parameter.Parameter:
-        """ Get current architecture parameters (to give them to an optimizer).
-        
-        Handles multi GPUs training by using DataParallel if needed.
-
-        Returns:
-            torch.nn.parameter.Parameter: cnn or crnn parameters.
-        """
-        #TODO: Get encoder & decoder params. Maybe by making a get_params() method 
-        #      in Encoder and Decoder class.
-        #return self.net.parameters()
-        # Parallelize model to multiple GPUs if needed.
-        """
-        if torch.cuda.device_count() > 1:
-            cnn_encoder = DataParallel(self.encoder)
-            rnn_decoder = DataParallel(self.decoder)
-            # Combine all EncoderCNN + DecoderRNN parameters
-            crnn_params = list(cnn_encoder.module.fc1.parameters()) + \
-                          list(cnn_encoder.module.bn1.parameters()) + \
-                          list(cnn_encoder.module.fc2.parameters()) + \
-                          list(cnn_encoder.module.bn2.parameters()) + \
-                          list(cnn_encoder.module.fc3.parameters()) + \
-                          list(rnn_decoder.parameters())
-        elif torch.cuda.device_count() == 1:
-            # Combine all EncoderCNN + DecoderRNN parameters
-            crnn_params = list(self.encoder.fc1.parameters()) + \
-                          list(self.encoder.bn1.parameters()) + \
-                          list(self.encoder.fc2.parameters()) + \
-                          list(self.encoder.bn2.parameters()) + \
-                          list(self.encoder.fc3.parameters()) + \
-                          list(self.decoder.parameters())
-        return crnn_params
-        """
-        return list(self.fusion.parameters()) + list(self.decoder.parameters())
-
     def configure_optimizers(self) -> Dict:
         """ Instanciate an optimizer and a learning rate scheduler to be used during training.
 
@@ -130,8 +92,9 @@ class LightningModel(pl.LightningModule):
                     object using this model. 
                     The 'monitor' key is used by the ReduceLROnPlateau scheduler.                        
         """
-        optimizer = SGD(self.get_arch_parameters(), lr=0.001, momentum=0.9, nesterov=True, weight_decay=5e-4)
-        scheduler = ReduceLROnPlateau(optimizer, mode = 'min', factor=0.2, patience=5, verbose=True)
+        parameters = list(self.fusion.encoder.parameters()) + list(self.decoder.parameters())
+        optimizer = self.builder.optimizer(parameters)
+        scheduler = self.builder.scheduler(optimizer)
         return {'optimizer': optimizer, 'lr_scheduler': scheduler, 'monitor': 'val_loss'}
 
     def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> Dict:

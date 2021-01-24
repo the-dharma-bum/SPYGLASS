@@ -5,13 +5,12 @@ https://github.com/HHTseng/video-classification/blob/master/ResNetCRNN/functions
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn.modules.rnn import RNN
 import pytorch_lightning as pl
 
 
 class DecoderRNN(pl.LightningModule):
 
-    """ RNN decoder: LSTM followed by linear. """
+    """ RNN decoder: LSTM followed by two linear layers. """
 
     def __init__(self, CNN_embed_dim=300, h_RNN_layers=3, h_RNN=256, h_FC_dim=128,
                  drop_p=0.3, num_classes=2) -> None:

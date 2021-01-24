@@ -6,16 +6,17 @@ import os
 import cv2
 import numpy as np
 import pandas as pd
+from typing import List, Tuple, Dict, Optional, Union, Callable, NewType
 import torch
 from torch.utils.data.dataset import Dataset
-from typing import List, Tuple, Dict, Optional, Union, Callable, NewType
-
+from einops import rearrange
+from skimage.transform import resize
 
 # Type hint
 Transform = NewType('Transform', Optional[Callable[[np.ndarray], torch.Tensor]])
 
 
-class SpyGlassVideoDataset(Dataset):
+class VideoDataset(Dataset):
 
     """ Pytorch Video Dataset. 
     Loads and stacks video frames and overwrite __getitem__ and __len__ methods.
@@ -25,7 +26,8 @@ class SpyGlassVideoDataset(Dataset):
 
     def __init__(self, input_root: str, channels: int, x_size: int, y_size: int,
                  mean: List[float], std: List[float], sampling: int=25, 
-                 medical_data_csv_path: str=None, transform: Transform=None) -> None:
+                 medical_data_csv_path: str=None, transform: Transform=None,
+                 reshape_method: str='resize') -> None:
         """ Instanciate video SpyGlass Dataset.
 
         Args:
@@ -41,28 +43,27 @@ class SpyGlassVideoDataset(Dataset):
             
             sampling (int): Sampling rate: takes one frame every sampling frames.
 
-            medical_data_csv_path (str, optional): The csv file containing the label for the 98 patients.
-                                                   It is not required while testing.
+            medical_data_csv_path (str, optional): The csv file containing the label for the
+                                                   98 patients. It is not required while testing.
             transform (Transform, optional): Takes a numpy array and apply a tranformation to it 
                                              (ie data augmentation).
                                              Returns a transformed numpy array. Defaults to None.
+            reshape_method (str): How to reshape frames: resize (interpolation) or center crop.
+                                  One of 'resize', 'crop'. Default to 'resize'.
         """
         super().__init__()
-        self.input_root   = input_root
-        self.input_list   = sorted(os.listdir(input_root))
-        self.channels     = channels
-        self.x_size       = x_size
-        self.y_size       = y_size
-        self.mean         = mean
-        self.std          = std
-        self.sampling     = sampling
+        self.input_root = input_root
+        self.input_list = sorted(os.listdir(input_root))
+        self.channels   = channels
+        self.x_size     = x_size
+        self.y_size     = y_size
+        self.mean       = mean
+        self.std        = std
+        self.sampling   = sampling
         if medical_data_csv_path is not None:
             self.medical_data = pd.read_csv(medical_data_csv_path)
-        self.transform    = transform
-    
-    def get_patient_index(self, dataset_index) -> int:
-        indexed_file = self.input_list[dataset_index]
-        return int(indexed_file.split('_')[0]) - 1
+        self.transform  = transform
+        self.reshape_method = reshape_method
 
     def get_target(self, patient_index: int) -> int:
         """ Gets a binary label (0: benign, 1: malign).
@@ -71,11 +72,10 @@ class SpyGlassVideoDataset(Dataset):
             patient_index (int): The patient_index ([1,98]) obtained from the dataset index.
 
         Returns:
-            int: A binary label (ie 0 or 1). If the corresponding label line in the medical_data csv 
-                 is >= 5 (ie 5 or 6), retunrs 0, else returns 1. See presentation_data.pdf.
+            int: A binary label (ie 0 or 1). If the corresponding label line in the medical_data
+                 csv is >= 5 (ie 5 or 6), returns 0, else returns 1. See presentation_data.pdf.
         """
-        target = 0 if self.medical_data.loc[patient_index].label >= 5 else 1
-        return target
+        return 0 if self.medical_data.loc[patient_index].label >= 5 else 1
 
     def center_crop(self, frame: np.ndarray) -> np.ndarray:
         """ Apply center cropping  on one given frame.
@@ -99,7 +99,15 @@ class SpyGlassVideoDataset(Dataset):
         Returns:
             np.ndarray: Shape (W,H,C).
         """
-        return (frame-self.mean)/self.std
+        return (frame - self.mean) / self.std
+
+    def process_frame(self, frame: np.ndarray) -> torch.Tensor:
+        frame = self.normalize(frame)
+        if self.reshape_method == 'resize':
+            frame = resize(frame, (self.x_size, self.y_size, self.channels)).astype(np.float32)
+        elif self.reshape_method == 'crop':
+            frame = self.center_crop(frame) 
+        return torch.from_numpy(rearrange(frame, 'h w c -> c h w'))
 
     def read_video(self, video_file: str) -> torch.FloatTensor:
         """ Stack sampled video frames in a tensor.
@@ -111,20 +119,22 @@ class SpyGlassVideoDataset(Dataset):
         Returns:
             torch.FloatTensor: Tensor of shape (C,T,W,H).
         """
-        capture = cv2.VideoCapture(video_file)
-        time_depth = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
+        capture      = cv2.VideoCapture(video_file)
+        time_depth   = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
         output_depth = int(time_depth / self.sampling) + 1
         frames = torch.FloatTensor(self.channels, output_depth, self.x_size, self.y_size)
-        frames_count = 0
+        print(80*'-')
+        print('TIME DEPTH.........: ', time_depth)
+        print('OUTPUT TENSOR SIZE.: ', frames.size())
         for t in range(time_depth):
             _, frame = capture.read()
-            if frames_count % self.sampling == 0:
-                frame = self.center_crop(self.normalize(frame))
-                frame = torch.from_numpy(frame)
-                # from channel last to channel first: (W,H,C) -> (C,W,H)
-                frame = frame.permute(2,0,1)
-                frames[:,t,:,:] = frame
-            frames_count += 1
+            if t % self.sampling == 0:
+                try:
+                    frames[:,t,:,:] = self.process_frame(frame) 
+                except:
+                    print('TIME DEPTH.........: ', time_depth)
+                    print('OUTPUT TENSOR SIZE.: ', frames.size())
+                    print('CURRENT STEP.......: ', t)
         return frames
 
     def __getitem__(self, index: int) -> Tuple[torch.FloatTensor, int]:
@@ -134,14 +144,13 @@ class SpyGlassVideoDataset(Dataset):
             index (int): A dataset index (in [1,98])
 
         Returns:
-            sample (Tuple[torch.FloatTensor, int]): Torch tensor of shape (C,T,W,H).
-                                                    int in [0,1].
+            sample (Tuple[torch.FloatTensor, int]): * Torch tensor of shape (C,T,W,H).
+                                                    * Int in [0,1].
         """
-        video_file = os.path.join(self.input_root, self.input_list[index])
-        clip = self.read_video(video_file)
+        clip = self.read_video(os.path.join(self.input_root, self.input_list[index]))
         if self.transform is not None:
             clip = self.transform(clip)
-        return clip, self.get_target(self.get_patient_index(index))
+        return clip, self.get_target(index)
 
     def __len__(self) ->  int:
         return len(self.input_list)

@@ -1,2 +1,2 @@
-from .dataset import SpyGlassVideoDataset
-from .datamodule import SpyGlassDataModule
+from .dataset import VideoDataset
+from .datamodule import DataModule

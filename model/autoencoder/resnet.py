@@ -4,6 +4,7 @@ https://github.com/HHTseng/video-classification/blob/master/ResNetCRNN/functions
 
 import torch
 import torch.nn as nn
+from torch.nn import parameter
 import torch.nn.functional as F
 import pytorch_lightning as pl
 
@@ -27,7 +28,7 @@ class ResNetEncoder(pl.LightningModule):
         self.fc3 = nn.Linear(fc_hidden2, CNN_embed_dim)
         self.drop_p = drop_p
         self.CNN_embed_dim = CNN_embed_dim
-            
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """ A usual resnet forward pass minus the last layer.
         Hence acts as an encoder.
