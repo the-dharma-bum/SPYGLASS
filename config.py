@@ -35,7 +35,7 @@ class DataModule:
     """
 
     video_root:            str = "/homes/l17vedre/Bureau/Sanssauvegarde/SPYGLASS/cutted/"
-    medical_data_csv_path: str = "/homes/l17vedre/SPYGLASS/medical_data.csv" 
+    medical_data_csv_path: str = "data/medical_data.csv" 
     channels:              int = 3
     x_size:                int = 224
     y_size:                int = 224   

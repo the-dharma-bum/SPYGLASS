@@ -1,7 +1,7 @@
 import os
 import subprocess
 
-DATASET_URL = 'https://mega.nz/#!EAE00ZqC!eRPUTgpVMR3z7UKbLV0_BXqbvkSYF16yWIfCb9kcZfQ'
+DATASET_URL = 'https://mega.nz/#!Jc12UBQa!6df2SbjLaYmh3OZLC2VN0mnMIFdfGqvxA5SdUwJaFko'
 
 
 def setup():
@@ -21,4 +21,4 @@ def get_data():
     os.system('chmod 755 /content/SPYGLASS/colab/download.sh')
     subprocess.check_call(['/content/SPYGLASS/colab/download.sh', DATASET_URL])
     print("Extracting dataset ...")
-    os.system('unzip -q SPYGLASS_cropped.zip')
+    os.system('unzip -q SPYGLASS_cutted.zip')
