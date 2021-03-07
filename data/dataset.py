@@ -25,7 +25,7 @@ class SpyGlassVideoDataset(Dataset):
 
     def __init__(self, input_root: str, channels: int, x_size: int, y_size: int,
                  mean: List[float], std: List[float], sampling: int=25, 
-                 medical_data_csv_path: str=None, transform: Transform=None) -> None:
+                 medical_data_csv_path: str=None, transform: Transform=None, criteria: str=None) -> None:
         """ Instanciate video SpyGlass Dataset.
 
         Args:
@@ -59,10 +59,12 @@ class SpyGlassVideoDataset(Dataset):
         if medical_data_csv_path is not None:
             self.medical_data = pd.read_csv(medical_data_csv_path)
         self.transform    = transform
+        self.criteria     = criteria
     
     def get_patient_index(self, dataset_index) -> int:
         indexed_file = self.input_list[dataset_index]
         return int(indexed_file.split('_')[0]) - 1
+
 
     def get_target(self, patient_index: int) -> int:
         """ Gets a binary label (0: benign, 1: malign).
@@ -74,8 +76,31 @@ class SpyGlassVideoDataset(Dataset):
             int: A binary label (ie 0 or 1). If the corresponding label line in the medical_data csv 
                  is >= 5 (ie 5 or 6), retunrs 0, else returns 1. See presentation_data.pdf.
         """
+
         target = 0 if self.medical_data.loc[patient_index].label >= 5 else 1
         return target
+
+    @staticmethod
+    def is0possible(criteria):
+        list_of_criteria_without_0 = ['bile', 'stenose_multi', 'infiltration_stenose', 'reduction_lumiere', 'ulceration_multi', 'ulceration_creusante', 'ulceration_irreg', 'type_relief', 'dilatation_vaisseaux', 'couleur', 'diagnostique', 'video']
+        return criteria not in list_of_criteria_without_0
+
+    def get_criteria_target(self, patient_index: int):
+        sum_label = 0
+        nb_doctor   = 0
+        for doctor in range(7):
+            csv_line = doctor*98 + patient_index
+            label = self.medical_data.loc[csv_line][self.criteria]
+            if  label != '0':
+                try:
+                    sum_label += int(label)
+                    nb_doctor += 1
+                except:
+                    continue
+            else:
+                if self.is0possible(self.criteria):
+                    nb_doctor += 1
+        return round(sum_label/nb_doctor)
 
     def center_crop(self, frame: np.ndarray) -> np.ndarray:
         """ Apply center cropping  on one given frame.
@@ -141,7 +166,7 @@ class SpyGlassVideoDataset(Dataset):
         clip = self.read_video(video_file)
         if self.transform is not None:
             clip = self.transform(clip)
-        return clip, self.get_target(self.get_patient_index(index))
+        return clip, self.get_criteria_target(self.get_patient_index(index))
 
     def __len__(self) ->  int:
         return len(self.input_list)

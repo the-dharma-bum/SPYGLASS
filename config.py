@@ -43,7 +43,7 @@ class DataModule:
     train_batch_size:      int = 2
     val_batch_size:        int = 2
     num_workers:           int = 4
-    
+    criteria:               str = 'bile'
 
 
 

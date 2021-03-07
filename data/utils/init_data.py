@@ -9,4 +9,5 @@ def init_datamodule(cfg):
                               cfg.medical_data_csv_path, 
                               cfg.train_batch_size,
                               cfg.val_batch_size,
-                              cfg.num_workers)
+                              cfg.num_workers,
+                              cfg.criteria)

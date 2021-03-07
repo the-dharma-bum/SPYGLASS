@@ -19,7 +19,7 @@ class SpyGlassDataModule(LightningDataModule):
 
     def __init__(self, input_root: str, channels: int, x_size: int, y_size: int,
                  sampling: int, medical_data_csv_path: str=None, 
-                 train_batch_size: int=64, val_batch_size: int=64, num_workers: int=4) -> None:
+                 train_batch_size: int=64, val_batch_size: int=64, num_workers: int=4, criteria: str=None) -> None:
         """ Instanciate a Pytorch Lightning DataModule.
 
         Args:
@@ -58,6 +58,7 @@ class SpyGlassDataModule(LightningDataModule):
         # value obtained by calling data.get_dataset_stats.get_mean_std_dataset()
         self.mean, self.std = [78.5606, 111.8194, 135.2136], [64.6343,  72.6750,  69.9263]
         self.train_transform, self.test_transform = self.init_transforms()
+        self.criteria = criteria
 
     def init_transforms(self):
         """ To be implemented. """
@@ -82,12 +83,12 @@ class SpyGlassDataModule(LightningDataModule):
             assert self.medical_data_csv_path is not None, "did you forget to specify stage='test' ?"
             spyglass_full = SpyGlassVideoDataset(self.input_root, self.channels, self.x_size, self.y_size,
                                                  self.mean, self.std,  self.sampling, self.medical_data_csv_path,
-                                                 transform=self.train_transform)
+                                                 transform=self.train_transform, criteria=self.criteria)
             self.spyglass_train, self.spyglass_val = random_split(spyglass_full, [train_length, val_length])
         if stage == 'test' or stage is None:
             self.spyglass_test = SpyGlassVideoDataset(self.input_root, self.channels, self.x_size, self.y_size,
                                                       self.mean, self.std, self.sampling, self.medical_data_csv_path,
-                                                      transform=self.test_transform)
+                                                      transform=self.test_transform, criteria=self.criteria)
 
     def train_dataloader(self) -> DataLoader:
         return DataLoader(self.spyglass_train, num_workers=self.num_workers,
