@@ -1,1 +1,1 @@
-from .train import run_colab_training
+from .train import init_trainer, download_outputs

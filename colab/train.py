@@ -17,19 +17,6 @@ def init_trainer():
   return Trainer(gpus=1, callbacks = [early_stopping])
 
 
-def run_colab_training(dm_config, train_config):
-  print('Instancing model...')
-  config = cfg.Config(dm_config, train_config)
-  data = DataModule.from_config(config.datamodule)
-  model = LightningModel.from_config(config)
-  try: 
-    trainer = init_trainer()
-    print('Ready. Training will start !')
-    trainer.fit(model, data)
-  except MisconfigurationException:
-    print('Did you forget to setup a GPU runtime ?')
-
-
 def download_outputs(file_module):
   os.system('zip -r /content/output.zip /content/SPYGLASS/lightning_logs/version_0/')
   file_module.download("/content/output.zip")
