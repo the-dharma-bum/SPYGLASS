@@ -16,7 +16,7 @@ num_classes =  {
 'regularite_relief': 2,
 'type_relief': 3,
 'saignement': 2,
-'vaisseaux_irrreguliers': 3,
+'vaisseaux_irrreguliers': 2,
 'dilatation_vaisseaux': 2,
 'couleur': 4,
 'diagnostique': 2,

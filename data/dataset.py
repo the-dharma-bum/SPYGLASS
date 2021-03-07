@@ -82,7 +82,7 @@ class SpyGlassVideoDataset(Dataset):
 
     @staticmethod
     def is0possible(criteria):
-        list_of_criteria_without_0 = ['bile', 'stenose_multi', 'infiltration_stenose', 'reduction_lumiere', 'ulceration_multi', 'ulceration_creusante', 'ulceration_irreg', 'type_relief', 'dilatation_vaisseaux', 'couleur', 'diagnostique', 'video']
+        list_of_criteria_without_0 = ['vaisseaux_irrreguliers', 'bile', 'stenose_multi', 'infiltration_stenose', 'reduction_lumiere', 'ulceration_multi', 'ulceration_creusante', 'ulceration_irreg', 'type_relief', 'dilatation_vaisseaux', 'couleur', 'diagnostique', 'video']
         return criteria not in list_of_criteria_without_0
 
     def get_criteria_target(self, patient_index: int):
