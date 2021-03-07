@@ -34,7 +34,7 @@ class DataModule:
         num_workers (int): Num of threads for the 3 dataloaders (train, val, test).
     """
 
-    video_root:            str = "/homes/l17vedre/Bureau/Sanssauvegarde/cutted/"
+    video_root:            str = "/homes/l17vedre/Bureau/Sanssauvegarde/SPYGLASS/cutted/"
     medical_data_csv_path: str = "/homes/l17vedre/SPYGLASS/medical_data.csv" 
     channels:              int = 3
     x_size:                int = 224
@@ -68,8 +68,8 @@ class Model:
     window:                 int = 10
     stride:                 int = 9
     early_fusion_dim:       int = 3
-    fusion_mode:            str = 'early'
-    encoder_base_net:       str = 'resnet50'
+    fusion_mode:            str = 'single_frame'
+    encoder_base_net:       str = 'resnet18'
     pretrained:            bool = False
     encoder_hidden_dim_1:   int = 512
     encoder_hidden_dim_2:   int = 512
@@ -81,6 +81,6 @@ class Model:
     h_RNN_layers:           int = 3
     h_RNN:                  int = 256
     num_classes:            int = 2
-    aggregation_mode:       str = 'last'
+    aggregation_mode:       str = 'mean'
     use_label_smoothing:   bool = False
     smoothing:            float = 0.1

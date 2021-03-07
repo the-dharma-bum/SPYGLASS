@@ -1,7 +1,8 @@
 """ Main Python file to start training using config.py """
 
 from argparse import ArgumentParser
-from pytorch_lightning.callbacks import LearningRateLogger, EarlyStopping, ModelCheckpoint
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
+#from pytorch_lightning.callbacks.lr_logger import LearningRateLogger
 from pytorch_lightning import Trainer
 from model.utils.init_model import init_model
 from data.utils import init_datamodule
@@ -15,9 +16,9 @@ def init_trainer():
     parser = ArgumentParser()
     parser = Trainer.add_argparse_args(parser)
     args   = parser.parse_args()
-    lr_logger      = LearningRateLogger()
+    #lr_logger      = LearningRateLogger()
     early_stopping = EarlyStopping(monitor='val_loss', mode='min', min_delta=0.001, patience=10, verbose=True)
-    return Trainer.from_argparse_args(args, callbacks = [lr_logger, early_stopping])
+    return Trainer.from_argparse_args(args, callbacks = [early_stopping])
 
 
 def run_training(datamodule_config, model_config):
