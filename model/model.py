@@ -11,7 +11,6 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 import pytorch_lightning as pl
 from .utils import init_encoder, init_decoder, init_fusion, init_aggregation
 
-
 class LightningModel(pl.LightningModule):
     
     """ LightningModule handling everything training related.
@@ -82,7 +81,7 @@ class LightningModel(pl.LightningModule):
             torch.Tensor: Shape (N, num_classes). 
                           Contains one list in [[0.,1.],[1.,0.]] for each batch element.
         """
-        one_hot_targets = one_hot(targets, num_classes=2).float()
+        one_hot_targets = one_hot(targets, num_classes=self.hparams.num_classes).float()
         if train and self.hparams.use_label_smoothing:
             one_hot_targets = self.label_smoothing(one_hot_targets)
         return one_hot_targets

@@ -1,5 +1,6 @@
 import data
 from dataclasses import dataclass
+from num_classes import num_classes
 
 
 # +-------------------------------------------------------------------------------------+ #
@@ -35,7 +36,7 @@ class DataModule:
     """
 
     video_root:            str = "/homes/l17vedre/Bureau/Sanssauvegarde/SPYGLASS/cutted/"
-    medical_data_csv_path: str = "data/medical_data.csv" 
+    medical_data_csv_path: str = "data/criteria.csv" 
     channels:              int = 3
     x_size:                int = 224
     y_size:                int = 224   
@@ -43,7 +44,7 @@ class DataModule:
     train_batch_size:      int = 2
     val_batch_size:        int = 2
     num_workers:           int = 4
-    criteria:               str = 'bile'
+    criteria:               str = 'vaisseaux_irrreguliers'
 
 
 
@@ -80,7 +81,8 @@ class Model:
     fc_hidden_dim:          int = 128
     h_RNN_layers:           int = 3
     h_RNN:                  int = 256
-    num_classes:            int = 2
+    num_classes:            int = num_classes['vaisseaux_irrreguliers']
     aggregation_mode:       str = 'mean'
     use_label_smoothing:   bool = False
     smoothing:            float = 0.1
+    criteria:               str = 'vaisseaux_irrreguliers'

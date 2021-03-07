@@ -21,4 +21,5 @@ def init_model(cfg):
                 aggregation_mode=cfg.aggregation_mode,
                 use_label_smoothing=cfg.use_label_smoothing,
                 smoothing=cfg.smoothing,
+                criteria=cfg.criteria,
     )
