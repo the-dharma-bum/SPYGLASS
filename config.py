@@ -34,7 +34,7 @@ class DataModule:
         num_workers (int): Num of threads for the 3 dataloaders (train, val, test).
     """
 
-    video_root:            str = "/homes/l17vedre/Bureau/Sanssauvegarde/SPYGLASS/cropped/"
+    video_root:            str = "/homes/l17vedre/Bureau/Sanssauvegarde/SPYGLASS/cutted/"
     medical_data_csv_path: str = "data/medical_data.csv" 
     channels:              int = 3
     x_size:                int = 224
