@@ -62,7 +62,7 @@ class SpyGlassVideoDataset(Dataset):
     
     def get_patient_index(self, dataset_index) -> int:
         indexed_file = self.input_list[dataset_index]
-        #return int(indexed_file.split('_')[0]) - 1
+        return int(indexed_file.split('_')[0]) - 1
 
     def get_target(self, patient_index: int) -> int:
         """ Gets a binary label (0: benign, 1: malign).
